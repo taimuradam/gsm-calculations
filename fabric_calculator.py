@@ -14,6 +14,8 @@ To tweak later: the calculation lives in `calculate()`, and the layout is
 built in `build_ui()`. Colors/sizes are grouped in the CONFIG block below.
 """
 
+import os
+import sys
 import tkinter as tk
 from tkinter import ttk, messagebox
 
@@ -195,8 +197,26 @@ class FabricCalculatorApp:
         self.meters_kg_var.set("—")
 
 
+def _resource_path(filename):
+    """
+    Locate a bundled data file both when running as a plain .py script and
+    when frozen into a PyInstaller --onefile .exe (which unpacks to a temp
+    folder available as sys._MEIPASS).
+    """
+    base = getattr(sys, "_MEIPASS", os.path.dirname(os.path.abspath(__file__)))
+    return os.path.join(base, filename)
+
+
 def main():
     root = tk.Tk()
+
+    # Show the window/taskbar icon. Wrapped in try/except because .ico via
+    # iconbitmap is a Windows feature; on other systems we just skip it.
+    try:
+        root.iconbitmap(_resource_path("icon.ico"))
+    except Exception:
+        pass
+
     FabricCalculatorApp(root)
     root.mainloop()
 
