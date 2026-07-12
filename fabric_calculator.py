@@ -9,6 +9,8 @@ CALCULATION
     width_m            = width_inches * 0.0254        # inches -> meters
     weight_per_meter_g = width_m * gsm                # grams per running meter
     meters_per_kg      = 1000 / weight_per_meter_g    # how many meters make 1 kg
+    total_weight_kg    = weight_per_meter_g * total_meters / 1000
+                                                      # total weight of the whole roll
 
 To tweak later: the calculation lives in `calculate()`, and the layout is
 built in `build_ui()`. Colors/sizes are grouped in the CONFIG block below.
@@ -32,6 +34,7 @@ INPUT_FONT = ("Segoe UI", 14)
 BUTTON_FONT = ("Segoe UI", 12, "bold")
 RESULT_FONT = ("Segoe UI", 18, "bold")     # large so results are easy to read
 RESULT_TITLE_FONT = ("Segoe UI", 11)
+TOTAL_FONT = ("Segoe UI", 26, "bold")      # extra-large for the headline total weight
 
 
 class FabricCalculatorApp:
@@ -44,8 +47,10 @@ class FabricCalculatorApp:
         # Tk variables holding the text of each input field
         self.width_var = tk.StringVar()
         self.gsm_var = tk.StringVar()
+        self.total_meters_var = tk.StringVar()
 
         # Tk variables holding the result text shown on screen
+        self.total_weight_kg_var = tk.StringVar(value="—")
         self.weight_g_var = tk.StringVar(value="—")
         self.weight_kg_var = tk.StringVar(value="—")
         self.meters_kg_var = tk.StringVar(value="—")
@@ -90,9 +95,18 @@ class FabricCalculatorApp:
         )
         gsm_entry.grid(row=2, column=1, **pad)
 
+        # --- Total length input --------------------------------------------
+        tk.Label(
+            container, text="Total length (meters)", font=LABEL_FONT, bg=BG_COLOR
+        ).grid(row=3, column=0, sticky="w", **pad)
+        total_meters_entry = tk.Entry(
+            container, textvariable=self.total_meters_var, font=INPUT_FONT, width=14, justify="center"
+        )
+        total_meters_entry.grid(row=3, column=1, **pad)
+
         # --- Buttons -------------------------------------------------------
         button_row = tk.Frame(container, bg=BG_COLOR)
-        button_row.grid(row=3, column=0, columnspan=2, pady=(16, 8))
+        button_row.grid(row=4, column=0, columnspan=2, pady=(16, 8))
 
         calc_btn = tk.Button(
             button_row,
@@ -125,11 +139,26 @@ class FabricCalculatorApp:
 
         # --- Results panel -------------------------------------------------
         results = tk.Frame(container, bg="white", bd=1, relief="solid", padx=20, pady=16)
-        results.grid(row=4, column=0, columnspan=2, pady=(12, 0), sticky="ew")
+        results.grid(row=5, column=0, columnspan=2, pady=(12, 0), sticky="ew")
 
-        self._add_result_row(results, 0, "Weight per meter (grams)", self.weight_g_var)
-        self._add_result_row(results, 2, "Weight per meter (kg)", self.weight_kg_var)
-        self._add_result_row(results, 4, "Meters per kg", self.meters_kg_var)
+        # Headline result: the total weight of the whole roll, extra-large.
+        tk.Label(
+            results, text="TOTAL WEIGHT", font=RESULT_TITLE_FONT, bg="white", fg="#555555"
+        ).grid(row=0, column=0, sticky="w", pady=(0, 0))
+        tk.Label(
+            results, textvariable=self.total_weight_kg_var, font=TOTAL_FONT,
+            bg="white", fg=RESULT_COLOR,
+        ).grid(row=1, column=0, sticky="w", pady=(0, 8))
+
+        # Thin divider between the headline and the supporting figures.
+        tk.Frame(results, bg="#e0e0e0", height=1).grid(
+            row=2, column=0, sticky="ew", pady=(0, 8)
+        )
+
+        # Supporting figures (still handy to see).
+        self._add_result_row(results, 3, "Weight per meter (grams)", self.weight_g_var)
+        self._add_result_row(results, 5, "Weight per meter (kg)", self.weight_kg_var)
+        self._add_result_row(results, 7, "Meters per kg", self.meters_kg_var)
 
     def _add_result_row(self, parent, row, title, var):
         """Helper: a small title label above a large result value."""
@@ -164,6 +193,9 @@ class FabricCalculatorApp:
         try:
             width_inches = self._parse_positive(self.width_var.get(), "Width (inches)")
             gsm = self._parse_positive(self.gsm_var.get(), "GSM (g/m²)")
+            total_meters = self._parse_positive(
+                self.total_meters_var.get(), "Total length (meters)"
+            )
         except ValueError as err:
             messagebox.showerror("Invalid input", str(err))
             return
@@ -182,8 +214,10 @@ class FabricCalculatorApp:
             return
 
         meters_per_kg = 1000 / weight_per_meter_g
+        total_weight_kg = weight_per_meter_g * total_meters / 1000  # whole roll
 
         # Update the on-screen results
+        self.total_weight_kg_var.set(f"{total_weight_kg:.2f} kg")
         self.weight_g_var.set(f"{weight_per_meter_g:.2f} g")
         self.weight_kg_var.set(f"{weight_per_meter_g / 1000:.3f} kg")
         self.meters_kg_var.set(f"{meters_per_kg:.2f} m")
@@ -192,6 +226,8 @@ class FabricCalculatorApp:
         """Reset all fields and results."""
         self.width_var.set("")
         self.gsm_var.set("")
+        self.total_meters_var.set("")
+        self.total_weight_kg_var.set("—")
         self.weight_g_var.set("—")
         self.weight_kg_var.set("—")
         self.meters_kg_var.set("—")
